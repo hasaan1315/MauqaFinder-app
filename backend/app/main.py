@@ -1,8 +1,10 @@
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from typing import Optional, List
+
 from app.database import supabase
 from app import schemas
-from typing import Optional, List
+from app.auth import get_current_user
 
 app = FastAPI(title="Mauka-Finder API")
 
@@ -47,15 +49,17 @@ def get_jobs(
     return response.data
 
 @app.post("/api/profiles", response_model=schemas.UserProfileResponse)
-def upsert_user_profile(profile: schemas.UserProfileCreate, user_id: str):
-    # Prepare the payload
+def upsert_user_profile(
+    profile: schemas.UserProfileCreate,
+    current_user: dict = Depends(get_current_user)  # <--- Injected dependency
+):
+    # Prepare the payload using the securely extracted UUID
     profile_data = profile.model_dump()
-    profile_data["id"] = user_id
+    profile_data["id"] = current_user["id"]
     
     # Upsert: Insert if it doesn't exist, update if it does
     response = supabase.table("user_profiles").upsert(profile_data).execute()
     
-    # Supabase returns the inserted/updated row in a list
     if response.data:
         return response.data[0]
-    return {"error": "Failed to save profile"}
+    raise HTTPException(status_code=400, detail="Failed to save profile")
