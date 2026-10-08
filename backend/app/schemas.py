@@ -21,6 +21,7 @@ class JobResponse(BaseModel):
     qualifications: Optional[Any] = None
     job_posted: Optional[str] = None
     last_date_to_apply: Optional[str] = None
+    district: Optional[str] = None
     job_url: str
     is_active: bool
     is_open: Optional[bool] = None

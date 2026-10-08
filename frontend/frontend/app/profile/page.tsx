@@ -1,123 +1,125 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+
+const EDUCATION_OPTIONS = [
+  { value: 10, label: 'Matric (10 years)' },
+  { value: 12, label: 'Intermediate (12 years)' },
+  { value: 14, label: 'Bachelor\'s (14 years)' },
+  { value: 16, label: 'Master\'s / BS (16 years)' },
+  { value: 18, label: 'MS / MPhil (18 years)' },
+]
 
 export default function ProfilePage() {
   const [fullName, setFullName] = useState('')
   const [education, setEducation] = useState(16)
   const [experience, setExperience] = useState(0)
-  const [location, setLocation] = useState('')
+  const [location, setLocation] = useState('all')
+  const [cities, setCities] = useState<string[]>([])
   const [status, setStatus] = useState({ loading: false, message: '' })
   const router = useRouter()
 
-  const handleSaveProfile = async (e: React.FormEvent) => {
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.user_metadata?.full_name)
+        setFullName(session.user.user_metadata.full_name)
+    })
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/locations`)
+      .then(res => res.json()).then(setCities).catch(() => {})
+  }, [])
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault()
     setStatus({ loading: true, message: '' })
-
     try {
-      // 1. Get the current user session
       const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        router.push('/login')
-        return
-      }
+      if (!session) { router.push('/login'); return }
 
-      // 2. Send the profile data to your FastAPI backend
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profiles`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
-        },
-        body: JSON.stringify({
-          full_name: fullName,
-          education_level_years: education,
-          experience_years: experience,
-          preferred_location: location
-        })
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location })
       })
-
       if (!res.ok) throw new Error('Failed to save profile')
-
-      setStatus({ loading: false, message: 'Profile saved successfully! Redirecting...' })
-      
-      // Redirect to the dashboard to see the new matches
-      setTimeout(() => {
-        router.push('/dashboard')
-      }, 1500)
-
+      setStatus({ loading: false, message: 'Profile saved! Redirecting...' })
+      setTimeout(() => router.push('/dashboard'), 1500)
     } catch (err: any) {
       setStatus({ loading: false, message: err.message })
     }
   }
 
+  const inputClass = "mt-1 block w-full px-4 py-3 rounded-lg text-sm transition-all duration-200"
+  const labelClass = "block text-xs font-semibold uppercase tracking-wider mb-1"
+  const borderStyle = { border: '1px solid var(--border)' }
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 text-black">
-      <div className="p-8 bg-white rounded-lg shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center">Set Your Preferences</h1>
-        
-        <form onSubmit={handleSaveProfile} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Full Name</label>
-            <input
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Education (Years)</label>
-            <input
-              type="number"
-              value={education}
-              onChange={(e) => setEducation(Number(e.target.value))}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+    <div className="min-h-screen py-12 px-4" style={{ background: 'var(--bg-primary)' }}>
+      <div className="max-w-lg mx-auto">
+        <div className="mb-8">
+          <h1 className="text-2xl font-bold" style={{ color: 'var(--text-primary)' }}>Your Preferences</h1>
+          <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>
+            We use these to match you with the most relevant jobs.
+          </p>
+        </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Experience (Years)</label>
-            <input
-              type="number"
-              value={experience}
-              onChange={(e) => setExperience(Number(e.target.value))}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+        <div className="p-8 rounded-2xl" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          <form onSubmit={handleSave} className="space-y-6">
+            <div>
+              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Full Name</label>
+              <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
+                className={inputClass} style={borderStyle} placeholder="Muhammad Ali" required />
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Preferred Location / City</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-              required
-            />
-          </div>
+            <div>
+              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Education Level</label>
+              <select value={education} onChange={e => setEducation(Number(e.target.value))}
+                className={inputClass} style={borderStyle}>
+                {EDUCATION_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
 
-          {status.message && (
-            <p className={`text-sm text-center ${status.message.includes('success') ? 'text-green-600' : 'text-red-600'}`}>
-              {status.message}
-            </p>
-          )}
+            <div>
+              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>
+                Years of Experience
+                <span className="ml-2 font-normal normal-case" style={{ color: '#10b981' }}>{experience} yr{experience !== 1 ? 's' : ''}</span>
+              </label>
+              <input type="range" min={0} max={20} value={experience} onChange={e => setExperience(Number(e.target.value))}
+                className="mt-2 w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ accentColor: '#10b981', background: `linear-gradient(to right, #10b981 ${experience * 5}%, #2d3f50 ${experience * 5}%)` }} />
+              <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span>
+              </div>
+            </div>
 
-          <button
-            type="submit"
-            disabled={status.loading}
-            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-          >
-            {status.loading ? 'Saving...' : 'Save Profile & View Matches'}
-          </button>
-        </form>
+            <div>
+              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Preferred District</label>
+              <select value={location} onChange={e => setLocation(e.target.value)}
+                className={inputClass} style={borderStyle}>
+                <option value="all">🇵🇰 All Pakistan</option>
+                {cities.map(city => <option key={city} value={city}>{city}</option>)}
+              </select>
+            </div>
+
+            {status.message && (
+              <div className="px-4 py-3 rounded-lg text-sm"
+                style={{
+                  background: status.message.includes('saved') ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                  color: status.message.includes('saved') ? '#10b981' : '#f87171',
+                  border: `1px solid ${status.message.includes('saved') ? 'rgba(16,185,129,0.2)' : 'rgba(239,68,68,0.2)'}`
+                }}>
+                {status.message}
+              </div>
+            )}
+
+            <button type="submit" disabled={status.loading}
+              className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-200 hover:scale-[1.02] disabled:opacity-50"
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
+              {status.loading ? 'Saving...' : 'Save & Find My Matches →'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

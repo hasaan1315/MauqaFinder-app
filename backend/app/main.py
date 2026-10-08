@@ -17,9 +17,48 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+PUNJAB_DISTRICTS = [
+    "Attock", "Bahawalnagar", "Bahawalpur", "Bhakkar", "Chakwal", "Chiniot",
+    "Dera Ghazi Khan", "Faisalabad", "Gujranwala", "Gujrat", "Hafizabad",
+    "Jhang", "Jhelum", "Kasur", "Khanewal", "Khushab", "Kot Addu", "Lahore",
+    "Layyah", "Lodhran", "Mandi Bahauddin", "Mianwali", "Murree", "Muzaffargarh",
+    "Nankana Sahib", "Narowal", "Okara", "Pakpattan", "Rahim Yar Khan", "Rajanpur",
+    "Rawalpindi", "Sahiwal", "Sargodha", "Sheikhupura", "Sialkot", "Talagang",
+    "Taunsa", "Toba Tek Singh", "Vehari", "Wazirabad"
+]
+
+@app.get("/api/locations", response_model=List[str])
+def get_locations():
+    return PUNJAB_DISTRICTS
+
 @app.get("/")
 def read_root():
     return {"status": "Backend connected to Supabase Data Mart"}
+
+@app.get("/api/jobs/matches", response_model=List[schemas.JobResponse])
+def get_personalized_matches(
+    current_user: dict = Depends(get_current_user)
+):
+    profile_res = supabase.table("user_profiles").select("*").eq("id", current_user["id"]).execute()
+    
+    if not profile_res.data:
+        raise HTTPException(status_code=404, detail="Profile not found. Please create a profile first.")
+    
+    profile = profile_res.data[0]
+    
+    query = supabase.schema("mart").table("jobs").select("*").eq("is_open", True)
+    
+    if profile.get("education_level_years"):
+        query = query.or_(f"education_level_years.lte.{profile['education_level_years']},education_level_years.is.null")
+        
+    if profile.get("experience_years") is not None:
+        query = query.or_(f"experience_years.lte.{profile['experience_years']},experience_years.is.null")
+        
+    if profile.get("preferred_location") and profile["preferred_location"] != "all":
+        query = query.or_(f"district.ilike.%{profile['preferred_location']}%,district.eq.All Pakistan")
+        
+    response = query.order("scraped_at", desc=True).limit(50).execute()
+    return response.data
 
 @app.get("/api/jobs", response_model=List[schemas.JobResponse])
 def get_jobs(
@@ -83,31 +122,3 @@ def login_for_token(credentials: LoginRequest):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-@app.get("/api/jobs/matches", response_model=List[schemas.JobResponse])
-def get_personalized_matches(
-    current_user: dict = Depends(get_current_user)
-):
-    # 1. Fetch the authenticated user's profile from Supabase
-    profile_res = supabase.table("user_profiles").select("*").eq("id", current_user["id"]).execute()
-    
-    if not profile_res.data:
-        raise HTTPException(status_code=404, detail="Profile not found. Please create a profile first.")
-    
-    profile = profile_res.data[0]
-    
-    # 2. Query the data mart using the user's specific constraints
-    query = supabase.schema("mart").table("jobs").select("*").eq("is_open", True)
-    
-    if profile.get("education_level_years"):
-        query = query.lte("education_level_years", profile["education_level_years"])
-        
-    if profile.get("experience_years") is not None:
-        query = query.lte("experience_years", profile["experience_years"])
-        
-    # (Optional) Uncomment and change "location" to your actual column name if it exists:
-    # if profile.get("preferred_location"):
-    #     query = query.ilike("city", f"%{profile['preferred_location']}%")
-        
-    response = query.order("scraped_at", desc=True).limit(50).execute()
-    return response.data

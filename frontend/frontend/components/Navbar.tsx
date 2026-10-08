@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
@@ -8,37 +9,42 @@ export default function Navbar() {
   const pathname = usePathname()
   const router = useRouter()
 
-  // Hide the navigation bar on the login screen
-if (pathname === '/login' || pathname === '/signup' || pathname === '/') return null
+  if (pathname === '/login' || pathname === '/signup' || pathname === '/') return null
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     router.push('/login')
   }
 
+  const navLink = (href: string, label: string) => {
+    const active = pathname === href
+    return (
+      <Link href={href}
+        className="px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200"
+        style={{
+          color: active ? '#10b981' : '#94a3b8',
+          background: active ? 'rgba(16,185,129,0.1)' : 'transparent',
+          border: active ? '1px solid rgba(16,185,129,0.25)' : '1px solid transparent',
+        }}>
+        {label}
+      </Link>
+    )
+  }
+
   return (
-    <nav className="bg-blue-600 shadow-md">
-      <div className="max-w-4xl mx-auto px-8 py-4 flex justify-between items-center text-white">
-        <div className="text-xl font-bold tracking-tight">
-          <Link href="/dashboard">Mauqa-Finder</Link>
-        </div>
-        
-        <div className="flex space-x-6 items-center text-sm font-medium">
-          <Link 
-            href="/dashboard" 
-            className={`hover:text-blue-200 transition ${pathname === '/dashboard' ? 'underline underline-offset-4' : ''}`}
-          >
-            Dashboard
-          </Link>
-          <Link 
-            href="/profile" 
-            className={`hover:text-blue-200 transition ${pathname === '/profile' ? 'underline underline-offset-4' : ''}`}
-          >
-            Profile
-          </Link>
-          <button
-            onClick={handleLogout}
-            className="ml-4 bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-gray-100 transition shadow-sm"
-          >
+    <nav className="sticky top-0 z-50 backdrop-blur-md"
+      style={{ background: 'rgba(15,25,35,0.9)', borderBottom: '1px solid #2d3f50' }}>
+      <div className="max-w-6xl mx-auto px-6 py-3 flex justify-between items-center">
+        <Link href="/dashboard" className="flex items-center">
+          <Image src="/logo-horizontal.svg" alt="Mauqa-Finder" width={200} height={40} priority />
+        </Link>
+
+        <div className="flex items-center gap-2">
+          {navLink('/dashboard', 'Dashboard')}
+          {navLink('/profile', 'Profile')}
+          <button onClick={handleLogout}
+            className="ml-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:scale-105"
+            style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.25)' }}>
             Logout
           </button>
         </div>
