@@ -4,6 +4,37 @@ import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+const DEGREE_OPTIONS = [
+  { value: '', label: '— None (show all) —' },
+  { value: 'computer science', label: 'Computer Science' },
+  { value: 'information technology', label: 'Information Technology' },
+  { value: 'software engineering', label: 'Software Engineering' },
+  { value: 'electrical engineering', label: 'Electrical Engineering' },
+  { value: 'civil engineering', label: 'Civil Engineering' },
+  { value: 'mechanical engineering', label: 'Mechanical Engineering' },
+  { value: 'telecommunication engineering', label: 'Telecommunication Engineering' },
+  { value: 'business administration', label: 'Business Administration (BBA/MBA)' },
+  { value: 'commerce', label: 'Commerce / B.Com' },
+  { value: 'accounting', label: 'Accounting / Finance' },
+  { value: 'economics', label: 'Economics' },
+  { value: 'public administration', label: 'Public Administration' },
+  { value: 'law', label: 'Law / LLB' },
+  { value: 'education', label: 'Education / B.Ed' },
+  { value: 'english', label: 'English Literature' },
+  { value: 'mathematics', label: 'Mathematics' },
+  { value: 'statistics', label: 'Statistics' },
+  { value: 'physics', label: 'Physics' },
+  { value: 'chemistry', label: 'Chemistry' },
+  { value: 'biology', label: 'Biology' },
+  { value: 'agriculture', label: 'Agriculture' },
+  { value: 'pharmacy', label: 'Pharmacy' },
+  { value: 'medical', label: 'MBBS / Medical' },
+  { value: 'nursing', label: 'Nursing' },
+  { value: 'architecture', label: 'Architecture' },
+  { value: 'data science', label: 'Data Science' },
+  { value: 'artificial intelligence', label: 'Artificial Intelligence' },
+]
+
 const EDUCATION_OPTIONS = [
   { value: 10, label: 'Matric (10 years)' },
   { value: 12, label: 'Intermediate (12 years)' },
@@ -17,6 +48,7 @@ export default function ProfilePage() {
   const [education, setEducation] = useState(16)
   const [experience, setExperience] = useState(0)
   const [location, setLocation] = useState('all')
+  const [degreeKeyword, setDegreeKeyword] = useState('')
   const [cities, setCities] = useState<string[]>([])
   const [status, setStatus] = useState({ loading: false, message: '' })
   const router = useRouter()
@@ -40,7 +72,7 @@ export default function ProfilePage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profiles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location })
+        body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location, degree_keyword: degreeKeyword || null })
       })
       if (!res.ok) throw new Error('Failed to save profile')
       setStatus({ loading: false, message: 'Profile saved! Redirecting...' })
@@ -91,6 +123,14 @@ export default function ProfilePage() {
               <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span>
               </div>
+            </div>
+
+            <div>
+              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Degree / Field of Study <span className="normal-case font-normal">(Optional)</span></label>
+              <select value={degreeKeyword} onChange={e => setDegreeKeyword(e.target.value)}
+                className={inputClass} style={borderStyle}>
+                {DEGREE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
             </div>
 
             <div>

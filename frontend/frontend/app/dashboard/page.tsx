@@ -21,18 +21,34 @@ function Badge({ label, color }: { label: string; color: string }) {
   )
 }
 
+function ScoreBadge({ score }: { score: number }) {
+  const color = score >= 85 ? '#10b981' : score >= 65 ? '#f59e0b' : '#f87171'
+  const bg = score >= 85 ? 'rgba(16,185,129,0.12)' : score >= 65 ? 'rgba(245,158,11,0.12)' : 'rgba(239,68,68,0.12)'
+  return (
+    <div className="flex flex-col items-center justify-center rounded-xl px-3 py-1.5 min-w-[56px]"
+      style={{ background: bg, border: `1px solid ${color}33` }}>
+      <span className="text-lg font-extrabold leading-none" style={{ color }}>{score}%</span>
+      <span className="text-[10px] font-medium mt-0.5" style={{ color }}>match</span>
+    </div>
+  )
+}
+
 function JobCard({ job }: { job: any }) {
+  const [showBreakdown, setShowBreakdown] = useState(false)
   const sourceColor = job.source === 'punjab' ? 'gold' : 'blue'
   const sourceLabel = job.source === 'punjab' ? 'Punjab Gov' : 'NJP'
 
   return (
-    <div className="p-5 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-xl group"
+    <div className="p-5 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-xl"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <h2 className="font-semibold text-base leading-snug flex-1" style={{ color: 'var(--text-primary)' }}>
           {job.title}
         </h2>
-        <Badge label={sourceLabel} color={sourceColor} />
+        <div className="flex items-center gap-2 shrink-0">
+          {job.match_score != null && <ScoreBadge score={job.match_score} />}
+          <Badge label={sourceLabel} color={sourceColor} />
+        </div>
       </div>
 
       {job.employer && (
@@ -48,6 +64,26 @@ function JobCard({ job }: { job: any }) {
           <Badge label={`Deadline: ${job.last_date_to_apply}`} color="red" />
         )}
       </div>
+
+      {job.match_breakdown?.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowBreakdown(v => !v)}
+            className="text-xs font-medium flex items-center gap-1 transition-colors"
+            style={{ color: 'var(--text-muted)' }}>
+            {showBreakdown ? '▲' : '▼'} {showBreakdown ? 'Hide' : 'Show'} match breakdown
+          </button>
+          {showBreakdown && (
+            <ul className="mt-2 space-y-1">
+              {job.match_breakdown.map((reason: string, i: number) => (
+                <li key={i} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }}>
+                  <span style={{ color: '#10b981' }}>✓</span> {reason}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
 
       <a href={job.job_url} target="_blank" rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 hover:gap-2.5"

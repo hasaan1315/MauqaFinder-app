@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Any
+from typing import Optional, Any, List
 from datetime import datetime
 
 class JobResponse(BaseModel):
@@ -25,6 +25,8 @@ class JobResponse(BaseModel):
     job_url: str
     is_active: bool
     is_open: Optional[bool] = None
+    match_score: Optional[int] = None
+    match_breakdown: Optional[List[str]] = None
 
     class Config:
         from_attributes = True
@@ -35,6 +37,7 @@ class UserProfileCreate(BaseModel):
     education_level_years: int = Field(default=16, description="10=Matric, 12=Inter, 14=Bachelors, 16=Master/BS")
     experience_years: int = Field(default=0)
     preferred_location: Optional[str] = None
+    degree_keyword: Optional[str] = None
 
 # Schema for returning the profile data back to the frontend
 class UserProfileResponse(UserProfileCreate):

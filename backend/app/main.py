@@ -1,6 +1,7 @@
 from fastapi import FastAPI, Depends, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List
+import re
 
 from app.database import supabase
 from app import schemas
@@ -35,30 +36,148 @@ def get_locations():
 def read_root():
     return {"status": "Backend connected to Supabase Data Mart"}
 
+# Maps degree keywords to education years
+EDU_KEYWORD_MAP = [
+    (r'ph\.?d', 18),
+    (r'm\.?phil|mphil', 18),
+    (r'ms\b|m\.?s\.\b', 18),
+    (r"master'?s?|m\.?a\b|m\.?sc\b|mba\b|m\.?com\b|med\b|llm\b", 16),
+    (r"bachelor'?s?|b\.?s\.?\b|b\.?e\.?\b|b\.?sc\b|b\.?a\b|b\.?com\b|llb\b|bba\b", 14),
+    (r'intermediate|f\.?a\b|f\.?sc\b|hssc|12th', 12),
+    (r'matric|ssc|10th', 10),
+]
+
+def _extract_education(text: str) -> Optional[int]:
+    if not text:
+        return None
+    t = text.lower()
+    found = []
+    for pattern, years in EDU_KEYWORD_MAP:
+        if re.search(pattern, t):
+            found.append(years)
+    return min(found) if found else None
+
+
+def _extract_experience(text: str) -> Optional[int]:
+    if not text:
+        return None
+    text = text.lower()
+    patterns = [
+        r'(\d+)\s*-?year[s]?\s*(?:of\s*)?(?:relevant\s*)?(?:professional\s*)?experience',
+        r'experience\s*of\s*(\d+)\s*-?year',
+        r'with\s*(\d+)\s*-?year[s]?',
+    ]
+    matches = []
+    for pattern in patterns:
+        for m in re.finditer(pattern, text):
+            matches.append(int(m.group(1)))
+    return min(matches) if matches else None
+
+
+def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
+    score = 0
+    breakdown = []
+    user_edu = profile.get("education_level_years") or 0
+    user_exp = profile.get("experience_years") or 0
+    user_loc = (profile.get("preferred_location") or "all").lower()
+
+    # Education (40%)
+    job_edu = job.get("education_level_years")
+    if job_edu is None:
+        job_edu = _extract_education(job.get("description") or "")
+        if job_edu is not None:
+            try:
+                supabase.schema("mart").table("jobs").update({"education_level_years": job_edu}).eq("job_id", job["job_id"]).execute()
+                job["education_level_years"] = job_edu
+            except Exception:
+                pass
+
+    if job_edu is None:
+        score += 40
+        breakdown.append("No specific education requirement")
+    elif user_edu >= job_edu:
+        score += 40
+        breakdown.append("Matches your education level")
+    else:
+        return 0, [f"Requires {job_edu} years of education"]
+
+    # Experience (40%)
+    job_exp = job.get("experience_years")
+    if job_exp is None:
+        job_exp = _extract_experience(job.get("description") or "")
+        if job_exp is not None:
+            # Persist extracted value back to Supabase
+            try:
+                supabase.schema("mart").table("jobs").update({"experience_years": job_exp}).eq("job_id", job["job_id"]).execute()
+                job["experience_years"] = job_exp
+            except Exception:
+                pass
+
+    if job_exp is None or job_exp == 0:
+        score += 40
+        breakdown.append("No specific experience requirement")
+    elif user_exp >= job_exp:
+        score += 40
+        breakdown.append("Matches your experience level")
+    else:
+        return 0, [f"Requires {job_exp} year(s) of experience"]
+
+    # Location (20%)
+    job_district = (job.get("district") or "").lower()
+    if user_loc == "all" or not job_district:
+        score += 20
+        breakdown.append("Available across Pakistan")
+    elif "all pakistan" in job_district:
+        score += 20
+        breakdown.append("Available across Pakistan")
+    elif user_loc in job_district or job_district in user_loc:
+        score += 20
+        breakdown.append("Location aligns with your preference")
+    else:
+        breakdown.append(f"Located in {job.get('district', 'another district')}, not your preferred area")
+
+    # Degree keyword filter + bonus (+30)
+    degree_keyword = (profile.get("degree_keyword") or "").strip().lower()
+    if degree_keyword:
+        qualifications = job.get("qualifications") or ""
+        if isinstance(qualifications, list):
+            qualifications = " ".join(str(q) for q in qualifications)
+        searchable = " ".join(filter(None, [
+            qualifications,
+            job.get("description") or "",
+        ])).lower()
+        if re.search(r'\b' + re.escape(degree_keyword) + r'\b', searchable):
+            score += 30
+            breakdown.append(f"Matches your specific field: {profile.get('degree_keyword')}")
+        else:
+            return 0, [f"Does not match your field: {profile.get('degree_keyword')}"]
+
+    return min(score, 100), breakdown
+
+
 @app.get("/api/jobs/matches", response_model=List[schemas.JobResponse])
 def get_personalized_matches(
     current_user: dict = Depends(get_current_user)
 ):
     profile_res = supabase.table("user_profiles").select("*").eq("id", current_user["id"]).execute()
-    
+
     if not profile_res.data:
         raise HTTPException(status_code=404, detail="Profile not found. Please create a profile first.")
-    
+
     profile = profile_res.data[0]
-    
-    query = supabase.schema("mart").table("jobs").select("*").eq("is_open", True)
-    
-    if profile.get("education_level_years"):
-        query = query.or_(f"education_level_years.lte.{profile['education_level_years']},education_level_years.is.null")
-        
-    if profile.get("experience_years") is not None:
-        query = query.or_(f"experience_years.lte.{profile['experience_years']},experience_years.is.null")
-        
-    if profile.get("preferred_location") and profile["preferred_location"] != "all":
-        query = query.or_(f"district.ilike.%{profile['preferred_location']}%,district.eq.All Pakistan")
-        
-    response = query.order("scraped_at", desc=True).limit(50).execute()
-    return response.data
+
+    response = supabase.schema("mart").table("jobs").select("*").eq("is_open", True).order("scraped_at", desc=True).limit(200).execute()
+
+    scored = []
+    for job in response.data:
+        match_score, match_breakdown = _score_job(job, profile)
+        if match_score >= 50:
+            job["match_score"] = match_score
+            job["match_breakdown"] = match_breakdown
+            scored.append(job)
+
+    scored.sort(key=lambda j: j["match_score"], reverse=True)
+    return scored
 
 @app.get("/api/jobs", response_model=List[schemas.JobResponse])
 def get_jobs(
