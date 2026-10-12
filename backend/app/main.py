@@ -207,6 +207,13 @@ def get_jobs(
     
     return response.data
 
+@app.get("/api/profiles/me", response_model=schemas.UserProfileResponse)
+def get_my_profile(current_user: dict = Depends(get_current_user)):
+    res = supabase.table("user_profiles").select("*").eq("id", current_user["id"]).execute()
+    if not res.data:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return res.data[0]
+
 @app.post("/api/profiles", response_model=schemas.UserProfileResponse)
 def upsert_user_profile(
     profile: schemas.UserProfileCreate,

@@ -17,9 +17,17 @@ export default function LoginPage() {
     e.preventDefault()
     setLoading(true)
     setMessage('')
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) setMessage(error.message)
-    else router.push('/dashboard')
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      setMessage(error.message)
+      setLoading(false)
+      return
+    }
+    // Check if profile exists, redirect to /profile if not
+    const profileRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profiles/me`, {
+      headers: { 'Authorization': `Bearer ${data.session!.access_token}` }
+    })
+    router.push(profileRes.ok ? '/dashboard' : '/profile')
     setLoading(false)
   }
 

@@ -26,7 +26,7 @@ export default function Home() {
           </h1>
 
           <p className="text-lg mb-10 max-w-xl mx-auto" style={{ color: 'var(--text-muted)' }}>
-            Stop scrolling through irrelevant listings. Set your education, experience, and district once — we match you with real government & private jobs across Punjab and Pakistan.
+            Stop scrolling through irrelevant listings. Set your education, experience, and district once — we match you with real government jobs across Pakistan.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
