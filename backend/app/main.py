@@ -85,12 +85,6 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
     job_edu = job.get("education_level_years")
     if job_edu is None:
         job_edu = _extract_education(job.get("description") or "")
-        if job_edu is not None:
-            try:
-                supabase.schema("mart").table("jobs").update({"education_level_years": job_edu}).eq("job_id", job["job_id"]).execute()
-                job["education_level_years"] = job_edu
-            except Exception:
-                pass
 
     if job_edu is None:
         score += 40
@@ -105,13 +99,6 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
     job_exp = job.get("experience_years")
     if job_exp is None:
         job_exp = _extract_experience(job.get("description") or "")
-        if job_exp is not None:
-            # Persist extracted value back to Supabase
-            try:
-                supabase.schema("mart").table("jobs").update({"experience_years": job_exp}).eq("job_id", job["job_id"]).execute()
-                job["experience_years"] = job_exp
-            except Exception:
-                pass
 
     if job_exp is None or job_exp == 0:
         score += 40
@@ -124,17 +111,18 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
 
     # Location (20%)
     job_district = (job.get("district") or "").lower()
-    if user_loc == "all" or not job_district:
+    job_source = (job.get("source") or "").lower()
+    if user_loc == "all":
         score += 20
         breakdown.append("Available across Pakistan")
-    elif "all pakistan" in job_district:
+    elif "all pakistan" in job_district or (not job_district and job_source == "njp"):
         score += 20
         breakdown.append("Available across Pakistan")
     elif user_loc in job_district or job_district in user_loc:
         score += 20
         breakdown.append("Location aligns with your preference")
     else:
-        breakdown.append(f"Located in {job.get('district', 'another district')}, not your preferred area")
+        return 0, [f"Located in {job.get('district', 'another district')}, not your preferred district"]
 
     # Degree keyword filter + bonus (+30)
     degree_keyword = (profile.get("degree_keyword") or "").strip().lower()

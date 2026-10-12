@@ -109,6 +109,15 @@ export default function Dashboard() {
 
         setUserName(session.user.user_metadata?.full_name?.split(' ')[0] || '')
 
+        // Use cached results from profile save if available
+        const cached = sessionStorage.getItem('cachedMatches')
+        if (cached) {
+          sessionStorage.removeItem('cachedMatches')
+          setJobs(JSON.parse(cached))
+          setLoading(false)
+          return
+        }
+
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/matches`, {
           headers: { 'Authorization': `Bearer ${session.access_token}` }
         })

@@ -33,6 +33,7 @@ const DEGREE_OPTIONS = [
   { value: 'architecture', label: 'Architecture' },
   { value: 'data science', label: 'Data Science' },
   { value: 'artificial intelligence', label: 'Artificial Intelligence' },
+  { value: 'other', label: 'Other (type your own)' },
 ]
 
 const EDUCATION_OPTIONS = [
@@ -49,6 +50,7 @@ export default function ProfilePage() {
   const [experience, setExperience] = useState(0)
   const [location, setLocation] = useState('all')
   const [degreeKeyword, setDegreeKeyword] = useState('')
+  const [otherDegree, setOtherDegree] = useState('')
   const [cities, setCities] = useState<string[]>([])
   const [status, setStatus] = useState({ loading: false, message: '' })
   const router = useRouter()
@@ -72,11 +74,17 @@ export default function ProfilePage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/profiles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location, degree_keyword: degreeKeyword || null })
+        body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location, degree_keyword: degreeKeyword === 'other' ? (otherDegree.trim() || null) : (degreeKeyword || null) })
       })
       if (!res.ok) throw new Error('Failed to save profile')
-      setStatus({ loading: false, message: 'Profile saved! Redirecting...' })
-      setTimeout(() => router.push('/dashboard'), 1500)
+      // Fetch matches now, cache in sessionStorage, then navigate
+      const matchRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/matches`, {
+        headers: { 'Authorization': `Bearer ${session.access_token}` }
+      })
+      if (matchRes.ok) {
+        sessionStorage.setItem('cachedMatches', JSON.stringify(await matchRes.json()))
+      }
+      router.push('/dashboard')
     } catch (err: any) {
       setStatus({ loading: false, message: err.message })
     }
@@ -127,10 +135,21 @@ export default function ProfilePage() {
 
             <div>
               <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Degree / Field of Study <span className="normal-case font-normal">(Optional)</span></label>
-              <select value={degreeKeyword} onChange={e => setDegreeKeyword(e.target.value)}
+              <select value={degreeKeyword} onChange={e => { setDegreeKeyword(e.target.value); setOtherDegree('') }}
                 className={inputClass} style={borderStyle}>
                 {DEGREE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
+              {degreeKeyword === 'other' && (
+                <input
+                  type="text"
+                  value={otherDegree}
+                  onChange={e => setOtherDegree(e.target.value)}
+                  className={inputClass}
+                  style={{ ...borderStyle, marginTop: '8px' }}
+                  placeholder="e.g. Islamic Studies, Urdu, Geography..."
+                  autoFocus
+                />
+              )}
             </div>
 
             <div>
@@ -156,7 +175,7 @@ export default function ProfilePage() {
             <button type="submit" disabled={status.loading}
               className="w-full py-3 rounded-lg font-semibold text-white transition-all duration-200 hover:scale-[1.02] disabled:opacity-50"
               style={{ background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16,185,129,0.3)' }}>
-              {status.loading ? 'Saving...' : 'Save & Find My Matches →'}
+              {status.loading ? 'Finding matches...' : 'Save & Find My Matches →'}
             </button>
           </form>
         </div>
