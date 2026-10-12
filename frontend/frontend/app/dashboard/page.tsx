@@ -109,7 +109,6 @@ export default function Dashboard() {
 
         setUserName(session.user.user_metadata?.full_name?.split(' ')[0] || '')
 
-        // Use cached results from profile save if available
         const cached = sessionStorage.getItem('cachedMatches')
         if (cached) {
           sessionStorage.removeItem('cachedMatches')

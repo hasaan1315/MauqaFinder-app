@@ -77,7 +77,6 @@ export default function ProfilePage() {
         body: JSON.stringify({ full_name: fullName, education_level_years: education, experience_years: experience, preferred_location: location, degree_keyword: degreeKeyword === 'other' ? (otherDegree.trim() || null) : (degreeKeyword || null) })
       })
       if (!res.ok) throw new Error('Failed to save profile')
-      // Fetch matches now, cache in sessionStorage, then navigate
       const matchRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/jobs/matches`, {
         headers: { 'Authorization': `Bearer ${session.access_token}` }
       })
