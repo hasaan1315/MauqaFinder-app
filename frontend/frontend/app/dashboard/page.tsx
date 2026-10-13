@@ -35,8 +35,9 @@ function ScoreBadge({ score }: { score: number }) {
 
 function JobCard({ job }: { job: any }) {
   const [showBreakdown, setShowBreakdown] = useState(false)
-  const sourceColor = job.source === 'punjab' ? 'gold' : 'blue'
-  const sourceLabel = job.source === 'punjab' ? 'Punjab Gov' : 'NJP'
+  
+  const sourceColor = job.source === 'punjab' ? 'gold' : job.source === 'ppsc' ? 'green' : 'blue'
+  const sourceLabel = job.source === 'punjab' ? 'Punjab Gov' : job.source === 'ppsc' ? 'PPSC' : 'NJP'
 
   return (
     <div className="p-5 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-xl"
@@ -181,11 +182,12 @@ export default function Dashboard() {
 
         {/* Stats bar */}
         {jobs.length > 0 && (
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             {[
               { label: 'Total Matches', value: jobs.length },
               { label: 'Punjab Jobs', value: jobs.filter(j => j.source === 'punjab').length },
               { label: 'NJP Jobs', value: jobs.filter(j => j.source === 'njp').length },
+              { label: 'PPSC Jobs', value: jobs.filter(j => j.source === 'ppsc').length },
             ].map(s => (
               <div key={s.label} className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
                 <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{s.value}</div>

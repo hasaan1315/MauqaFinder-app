@@ -86,6 +86,9 @@ export default function ProfilePage() {
       router.push('/dashboard')
     } catch (err: any) {
       setStatus({ loading: false, message: err.message })
+    } finally {
+      // NEW: Always clear the loading state so Next.js doesn't cache a stuck button
+      setStatus(prev => ({ ...prev, loading: false }))
     }
   }
 
