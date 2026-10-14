@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+
 function Badge({ label, color }: { label: string; color: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
     green:  { bg: 'rgba(16,185,129,0.12)',  text: '#10b981' },
