@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
-
 function Badge({ label, color }: { label: string; color: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
     green:  { bg: 'rgba(16,185,129,0.12)',  text: '#10b981' },
@@ -41,7 +40,7 @@ function JobCard({ job }: { job: any }) {
   const sourceLabel = job.source === 'punjab' ? 'Punjab Gov' : job.source === 'ppsc' ? 'PPSC' : 'NJP'
 
   return (
-    <div className="p-5 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-xl"
+    <div className="p-5 rounded-xl transition-all duration-200 hover:scale-[1.01] hover:shadow-md shadow-sm"
       style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
       <div className="flex items-start justify-between gap-3 mb-3">
         <h2 className="font-semibold text-base leading-snug flex-1" style={{ color: 'var(--text-primary)' }}>
@@ -54,7 +53,7 @@ function JobCard({ job }: { job: any }) {
       </div>
 
       {job.employer && (
-        <p className="text-sm mb-3" style={{ color: 'var(--text-muted)' }}>🏢 {job.employer}</p>
+        <p className="text-sm mb-3 font-medium" style={{ color: 'var(--text-primary)', opacity: 0.85 }}>🏢 {job.employer}</p>
       )}
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -79,7 +78,7 @@ function JobCard({ job }: { job: any }) {
             <ul className="mt-2 space-y-1">
               {job.match_breakdown.map((reason: string, i: number) => (
                 <li key={i} className="text-xs flex items-start gap-1.5" style={{ color: 'var(--text-muted)' }}>
-                  <span style={{ color: '#10b981' }}>✓</span> {reason}
+                  <span style={{ color: 'var(--accent)' }}>✓</span> {reason}
                 </li>
               ))}
             </ul>
@@ -89,7 +88,7 @@ function JobCard({ job }: { job: any }) {
 
       <a href={job.job_url} target="_blank" rel="noopener noreferrer"
         className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 hover:gap-2.5"
-        style={{ color: '#10b981' }}>
+        style={{ color: 'var(--accent)' }}>
         View Job →
       </a>
     </div>
@@ -102,6 +101,11 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null)
   const [userName, setUserName] = useState('')
   const router = useRouter()
+
+  // --- NEW: Filter States ---
+  const [filterSource, setFilterSource] = useState('All')
+  const [filterExp, setFilterExp] = useState('All')
+  const [filterSeats, setFilterSeats] = useState('All')
 
   useEffect(() => {
     async function fetchMatches() {
@@ -136,11 +140,33 @@ export default function Dashboard() {
     fetchMatches()
   }, [router])
 
+  // --- NEW: Filter Logic ---
+  const displayedJobs = jobs.filter(job => {
+    // 1. Source check
+    const matchSource = filterSource === 'All' || 
+      (filterSource === 'Punjab' && job.source === 'punjab') ||
+      (filterSource === 'NJP' && job.source === 'njp') ||
+      (filterSource === 'PPSC' && job.source === 'ppsc');
+
+    // 2. Experience check
+    const matchExp = filterExp === 'All' ||
+      (filterExp === 'Entry' && (job.experience_years === 0 || job.experience_years == null)) ||
+      (filterExp === '1-3' && job.experience_years >= 1 && job.experience_years <= 3) ||
+      (filterExp === '4+' && job.experience_years >= 4);
+
+    // 3. Vacancies check
+    const matchSeats = filterSeats === 'All' ||
+      (filterSeats === 'Single' && job.vacancies === 1) ||
+      (filterSeats === 'Multiple' && job.vacancies > 1);
+
+    return matchSource && matchExp && matchSeats;
+  });
+
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-primary)' }}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-full border-2 border-t-transparent animate-spin mx-auto mb-4"
-          style={{ borderColor: '#10b981', borderTopColor: 'transparent' }} />
+          style={{ borderColor: 'var(--accent)', borderTopColor: 'transparent' }} />
         <p style={{ color: 'var(--text-muted)' }}>Finding your matches...</p>
       </div>
     </div>
@@ -148,13 +174,13 @@ export default function Dashboard() {
 
   if (error) return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg-primary)' }}>
-      <div className="p-6 rounded-xl max-w-md w-full text-center" style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.3)' }}>
+      <div className="p-6 rounded-xl max-w-md w-full text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid rgba(239,68,68,0.3)' }}>
         <div className="text-4xl mb-3">⚠️</div>
         <p className="font-semibold mb-1" style={{ color: '#f87171' }}>Something went wrong</p>
         <p className="text-sm mb-4" style={{ color: 'var(--text-muted)' }}>{error}</p>
         <button onClick={() => router.push('/profile')}
-          className="px-6 py-2 rounded-lg text-sm font-medium text-white"
-          style={{ background: '#10b981' }}>
+          className="px-6 py-2 rounded-lg text-sm font-medium text-white shadow-sm"
+          style={{ background: 'var(--accent)' }}>
           Update Profile
         </button>
       </div>
@@ -175,44 +201,96 @@ export default function Dashboard() {
             </p>
           </div>
           <button onClick={() => router.push('/profile')}
-            className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105"
-            style={{ background: 'var(--bg-card)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)' }}>
+            className="px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 shadow-sm text-white"
+            style={{ background: 'var(--accent)' }}>
             ⚙️ Update Preferences
           </button>
         </div>
 
         {/* Stats bar */}
         {jobs.length > 0 && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {[
               { label: 'Total Matches', value: jobs.length },
               { label: 'Punjab Jobs', value: jobs.filter(j => j.source === 'punjab').length },
               { label: 'NJP Jobs', value: jobs.filter(j => j.source === 'njp').length },
               { label: 'PPSC Jobs', value: jobs.filter(j => j.source === 'ppsc').length },
             ].map(s => (
-              <div key={s.label} className="p-4 rounded-xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-                <div className="text-2xl font-bold" style={{ color: '#10b981' }}>{s.value}</div>
-                <div className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
+              <div key={s.label} className="p-4 rounded-xl text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+                <div className="text-2xl font-bold" style={{ color: 'var(--accent)' }}>{s.value}</div>
+                <div className="text-xs mt-1 font-medium" style={{ color: 'var(--text-muted)' }}>{s.label}</div>
               </div>
             ))}
           </div>
         )}
 
-        {/* Jobs */}
+        {/* --- NEW: Filter Bar --- */}
+        {jobs.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-6 p-4 rounded-xl shadow-sm" 
+               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <span className="text-sm font-semibold mr-1" style={{ color: 'var(--text-muted)' }}>Filter by:</span>
+            
+            <select value={filterSource} onChange={(e) => setFilterSource(e.target.value)}
+              className="text-sm py-2 px-3 rounded-lg cursor-pointer outline-none transition-colors" 
+              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+              <option value="All">All Sources</option>
+              <option value="Punjab">Punjab Gov</option>
+              <option value="NJP">NJP</option>
+              <option value="PPSC">PPSC</option>
+            </select>
+
+            <select value={filterExp} onChange={(e) => setFilterExp(e.target.value)}
+              className="text-sm py-2 px-3 rounded-lg cursor-pointer outline-none transition-colors" 
+              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+              <option value="All">All Experience</option>
+              <option value="Entry">Entry Level (0 yrs)</option>
+              <option value="1-3">Mid Level (1-3 yrs)</option>
+              <option value="4+">Senior (4+ yrs)</option>
+            </select>
+
+            <select value={filterSeats} onChange={(e) => setFilterSeats(e.target.value)}
+              className="text-sm py-2 px-3 rounded-lg cursor-pointer outline-none transition-colors" 
+              style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', border: '1px solid var(--border)' }}>
+              <option value="All">All Vacancies</option>
+              <option value="Single">Single Seat</option>
+              <option value="Multiple">Multiple Seats</option>
+            </select>
+
+            <div className="ml-auto text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+              Showing {displayedJobs.length} of {jobs.length}
+            </div>
+          </div>
+        )}
+
+        {/* Jobs List */}
         {jobs.length === 0 ? (
-          <div className="p-12 rounded-2xl text-center" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+          // Total empty state (no matches at all from backend)
+          <div className="p-12 rounded-2xl text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="text-5xl mb-4">🔍</div>
             <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No matches found</p>
             <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Try adjusting your education, experience, or location preferences.</p>
             <button onClick={() => router.push('/profile')}
-              className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white"
-              style={{ background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+              className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105"
+              style={{ background: 'var(--accent)' }}>
               Update Preferences
+            </button>
+          </div>
+        ) : displayedJobs.length === 0 ? (
+          // Filter empty state (jobs exist, but filters hid them all)
+          <div className="p-12 rounded-2xl text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <div className="text-5xl mb-4">🗂️</div>
+            <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No jobs match these filters</p>
+            <p className="text-sm mb-6" style={{ color: 'var(--text-muted)' }}>Try adjusting the dropdowns above to see more results.</p>
+            <button onClick={() => { setFilterSource('All'); setFilterExp('All'); setFilterSeats('All'); }}
+              className="px-6 py-2.5 rounded-lg text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105"
+              style={{ background: 'var(--text-muted)' }}>
+              Clear Filters
             </button>
           </div>
         ) : (
           <div className="grid gap-4">
-            {jobs.map((job, i) => <JobCard key={job.job_id || i} job={job} />)}
+            {/* --- NEW: Map over displayedJobs instead of jobs --- */}
+            {displayedJobs.map((job, i) => <JobCard key={job.job_id || i} job={job} />)}
           </div>
         )}
       </div>

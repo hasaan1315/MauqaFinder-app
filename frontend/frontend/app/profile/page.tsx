@@ -39,9 +39,10 @@ const DEGREE_OPTIONS = [
 const EDUCATION_OPTIONS = [
   { value: 10, label: 'Matric (10 years)' },
   { value: 12, label: 'Intermediate (12 years)' },
-  { value: 14, label: 'Bachelor\'s (14 years)' },
-  { value: 16, label: 'Master\'s / BS (16 years)' },
+  { value: 14, label: "Bachelor's (14 years)" },
+  { value: 16, label: "Master's / BS (16 years)" },
   { value: 18, label: 'MS / MPhil (18 years)' },
+  { value: 21, label: 'PhD / Doctorate (21 years)' }, // Set to 21
 ]
 
 export default function ProfilePage() {

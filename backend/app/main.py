@@ -36,16 +36,37 @@ def get_locations():
 def read_root():
     return {"status": "Backend connected to Supabase Data Mart"}
 
-# Maps degree keywords to education years
+# Mirrors mart.degree_rules from Supabase
 EDU_KEYWORD_MAP = [
-    (r'ph\.?d', 18),
-    (r'm\.?phil|mphil', 18),
-    (r'ms\b|m\.?s\.\b', 18),
-    (r"master'?s?|m\.?a\b|m\.?sc\b|mba\b|m\.?com\b|med\b|llm\b", 16),
-    (r"bachelor'?s?|b\.?s\.?\b|b\.?e\.?\b|b\.?sc\b|b\.?a\b|b\.?com\b|llb\b|bba\b", 14),
-    (r'intermediate|f\.?a\b|f\.?sc\b|hssc|12th', 12),
-    (r'matric|ssc|10th', 10),
+    (r'ca\)?\s*-\s*intermediate|chartered accountancy\s*\(?ca\)?\s*-?\s*intermediate', None),
+    (r'phd|ph\.d\.?|doctorate|d\.phil|doctor of philosophy', 21),
+    (r'ms|m\.s\.?|mphil|m\.phil\.?|master of philosophy|masters? in philosophy|llm|ll\.m\.?|master of laws', 18),
+    (r'hons\.?|honou?rs', 16),
+    (r'b\.?\s?sc\.?.{0,20}engineering|b\.?\s?sc\.?\s+engg\.?', 16),
+    (r'bs|b\.s\.?|bscs|bsit|bba|be|b\.e\.?|b\.?\s?tech|b\.?\s?eng|b\.?\s?arch|b\.?\s?pharm|mbbs|bds|pharm-?d|dvm|llb|ll\.b\.?', 16),
+    (r'masters?|msc|m\.sc\.?|ma|m\.a\.?|mcom|m\.com\.?|mcs|mit|mba|m\.b\.a\.?|med|m\.ed\.?|mpa|acca|acma|ca|chartered accountan(cy|t)|cost and management accountan(cy|t)', 16),
+    (r'bachelors?|b\.?\s?sc\.?|b\.?\s?a\.?|b\.?\s?com\.?|adp|ade|associate degree', 14),
+    (r'dae|d\.a\.e\.?|diploma of associate engineer(ing)?', 12),
+    (r'fsc|f\.sc\.?|fa|f\.a\.?|ics|icom|i\.com\.?|hssc|intermediate|higher secondary|a[- ]?levels?', 12),
+    (r'matric|matriculation|ssc|secondary school|o[- ]?levels?', 10),
+    (r'middle', 8),
+    (r'primary', 5),
 ]
+
+def _extract_education(text: str) -> Optional[int]:
+    if not text:
+        return None
+    t = text.lower()
+    found = []
+    
+    for pattern, years in EDU_KEYWORD_MAP:
+        # We use \b to ensure we match whole words, just like your SQL rules intend
+        if re.search(r'\b(?:' + pattern.lower() + r')\b', t):
+            if years is not None:
+                found.append(years)
+                
+    # Returns the minimum required education found in the text (e.g., if it says "PhD or Masters", it requires 16)
+    return min(found) if found else None
 
 def _extract_education(text: str) -> Optional[int]:
     if not text:
@@ -93,7 +114,7 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
         score += 40
         breakdown.append("Matches your education level")
     else:
-        return 0, [f"Requires {job_edu} years of education"]
+        breakdown.append(f"Missing education (Requires {job_edu} yrs, you have {user_edu})")
 
     # Experience (40%)
     job_exp = job.get("experience_years")
@@ -107,7 +128,7 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
         score += 40
         breakdown.append("Matches your experience level")
     else:
-        return 0, [f"Requires {job_exp} year(s) of experience"]
+        breakdown.append(f"Missing experience (Requires {job_exp} yrs, you have {user_exp})")
 
     # Location (20%)
     job_district = (job.get("district") or "").lower()
@@ -122,9 +143,9 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
         score += 20
         breakdown.append("Location aligns with your preference")
     else:
-        return 0, [f"Located in {job.get('district', 'another district')}, not your preferred district"]
+        breakdown.append(f"Different location ({job.get('district', 'N/A')})")
 
-    # Degree keyword filter + bonus (+30)
+    # Degree keyword filter + bonus (+20 instead of 30 so it doesn't inflate bad matches)
     degree_keyword = (profile.get("degree_keyword") or "").strip().lower()
     if degree_keyword:
         qualifications = job.get("qualifications") or ""
@@ -135,10 +156,10 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
             job.get("description") or "",
         ])).lower()
         if re.search(r'\b' + re.escape(degree_keyword) + r'\b', searchable):
-            score += 30
+            score += 20
             breakdown.append(f"Matches your specific field: {profile.get('degree_keyword')}")
         else:
-            return 0, [f"Does not match your field: {profile.get('degree_keyword')}"]
+            breakdown.append(f"Missing keyword: {profile.get('degree_keyword')}")
 
     return min(score, 100), breakdown
 
