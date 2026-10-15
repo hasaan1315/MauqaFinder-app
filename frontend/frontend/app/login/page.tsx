@@ -47,7 +47,7 @@ export default function LoginPage() {
             <Image src="/logo.svg" alt="Mauqa-Finder" width={72} height={72} priority />
           </div>
           <div>
-            <span className="text-2xl font-extrabold" style={{ color: '#f1f5f9' }}>Mauqa</span>
+            <span className="text-2xl font-extrabold" style={{ color: '#000000' }}>Mauqa</span>
             <span className="text-2xl font-extrabold" style={{ color: '#10b981' }}>-Finder</span>
           </div>
           <p className="mt-1 text-sm" style={{ color: 'var(--text-muted)' }}>Sign in to your account</p>
