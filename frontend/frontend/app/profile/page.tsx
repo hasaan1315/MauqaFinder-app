@@ -126,11 +126,26 @@ export default function ProfilePage() {
             <div>
               <label className={labelClass} style={{ color: 'var(--text-muted)' }}>
                 Years of Experience
-                <span className="ml-2 font-normal normal-case" style={{ color: '#10b981' }}>{experience} yr{experience !== 1 ? 's' : ''}</span>
+                <span className="ml-2 font-normal normal-case" style={{ color: '#10b981' }}>
+                  {experience} yr{experience !== 1 ? 's' : ''}
+                </span>
               </label>
-              <input type="range" min={0} max={20} value={experience} onChange={e => setExperience(Number(e.target.value))}
-                className="mt-2 w-full h-2 rounded-lg appearance-none cursor-pointer"
-                style={{ accentColor: '#10b981', background: `linear-gradient(to right, #10b981 ${experience * 5}%, #2d3f50 ${experience * 5}%)` }} />
+              
+              <input 
+                type="range" 
+                min={0} 
+                max={20} 
+                value={experience} 
+                onChange={e => setExperience(Number(e.target.value))}
+                /* Kept h-3 and borders, added appearance-none back so the gradient applies cleanly */
+                className="mt-2 w-full h-3 rounded-lg cursor-pointer outline-none border border-gray-300 shadow-sm appearance-none"
+                style={{ 
+                  accentColor: '#10b981', 
+                  /* Green on the left, soft gray (#e5e7eb) on the right. No black! */
+                  background: `linear-gradient(to right, #10b981 ${experience * 5}%, #00308f ${experience * 5}%)` 
+                }} 
+              />
+              
               <div className="flex justify-between text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
                 <span>0</span><span>5</span><span>10</span><span>15</span><span>20</span>
               </div>
