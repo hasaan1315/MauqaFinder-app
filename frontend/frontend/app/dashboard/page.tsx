@@ -86,11 +86,19 @@ function JobCard({ job }: { job: any }) {
         </div>
       )}
 
-      <a href={job.job_url} target="_blank" rel="noopener noreferrer"
-        className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 hover:gap-2.5"
-        style={{ color: 'var(--accent)' }}>
-        View Job →
-      </a>
+      {/* --- UPDATED LINK SECTION --- */}
+      <div className="flex flex-col items-start gap-1">
+        <a href={job.job_url} target="_blank" rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200 hover:gap-2.5"
+          style={{ color: 'var(--accent)' }}>
+          {job.source === 'ppsc' ? 'Open PPSC Portal →' : 'View Job →'}
+        </a>
+        {job.source === 'ppsc' && (
+          <span className="text-[10px]" style={{ color: 'var(--text-muted)' }}>
+            * PPSC requires you to manually select the job from their main list.
+          </span>
+        )}
+      </div>
     </div>
   )
 }
@@ -102,7 +110,6 @@ export default function Dashboard() {
   const [userName, setUserName] = useState('')
   const router = useRouter()
 
-  // --- NEW: Filter States ---
   const [filterSource, setFilterSource] = useState('All')
   const [filterExp, setFilterExp] = useState('All')
   const [filterSeats, setFilterSeats] = useState('All')
@@ -140,7 +147,6 @@ export default function Dashboard() {
     fetchMatches()
   }, [router])
 
-  // --- NEW: Filter Logic ---
   const displayedJobs = jobs.filter(job => {
     // 1. Source check
     const matchSource = filterSource === 'All' || 
@@ -224,7 +230,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* --- NEW: Filter Bar --- */}
+        {/* Filter Bar */}
         {jobs.length > 0 && (
           <div className="flex flex-wrap items-center gap-3 mb-6 p-4 rounded-xl shadow-sm" 
                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
@@ -264,7 +270,6 @@ export default function Dashboard() {
 
         {/* Jobs List */}
         {jobs.length === 0 ? (
-          // Total empty state (no matches at all from backend)
           <div className="p-12 rounded-2xl text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="text-5xl mb-4">🔍</div>
             <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No matches found</p>
@@ -276,7 +281,6 @@ export default function Dashboard() {
             </button>
           </div>
         ) : displayedJobs.length === 0 ? (
-          // Filter empty state (jobs exist, but filters hid them all)
           <div className="p-12 rounded-2xl text-center shadow-sm" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
             <div className="text-5xl mb-4">🗂️</div>
             <p className="font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>No jobs match these filters</p>
@@ -289,7 +293,6 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid gap-4">
-            {/* --- NEW: Map over displayedJobs instead of jobs --- */}
             {displayedJobs.map((job, i) => <JobCard key={job.job_id || i} job={job} />)}
           </div>
         )}

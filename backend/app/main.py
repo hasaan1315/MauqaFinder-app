@@ -115,8 +115,20 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
 
     # --- 2. Education (35% Max) ---
     job_edu = job.get("education_level_years")
+    
+    # If the database didn't provide a strict number, extract it from text fields
     if job_edu is None:
-        job_edu = _extract_education(job.get("description") or "")
+        qual_list = job.get("qualifications")
+        if isinstance(qual_list, list):
+            qual_list = " ".join(str(q) for q in qual_list)
+            
+        # Combine all possible fields where degree text might be hiding across PJP, PPSC, and NJP
+        combined_text = " ".join(filter(None, [
+            job.get("qualification_text"),  # Used by PPSC
+            qual_list,                      # Used by NJP
+            job.get("description")          # Used by PJP
+        ]))
+        job_edu = _extract_education(combined_text)
 
     if job_edu is None:
         score += 35
@@ -149,6 +161,7 @@ def _score_job(job: dict, profile: dict) -> tuple[int, list[str]]:
             qualifications = " ".join(str(q) for q in qualifications)
         searchable = " ".join(filter(None, [
             qualifications,
+            job.get("qualification_text") or "",
             job.get("description") or "",
         ])).lower()
         if re.search(r'\b' + re.escape(degree_keyword) + r'\b', searchable):
