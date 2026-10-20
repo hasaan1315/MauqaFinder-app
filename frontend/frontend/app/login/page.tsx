@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
+import PasswordInput from '@/components/PasswordInput'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -61,11 +62,13 @@ export default function LoginPage() {
                 className={inputClass} style={{ border: '1px solid var(--border)' }} placeholder="you@example.com" required />
             </div>
 
-            <div>
-              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                className={inputClass} style={{ border: '1px solid var(--border)' }} placeholder="••••••••" required />
-            </div>
+            <PasswordInput
+              value={password}
+              onChange={setPassword}
+              label="Password"
+              placeholder="••••••••"
+              autoComplete="current-password"
+            />
 
             {message && (
               <div className="px-4 py-3 rounded-lg text-sm" style={{ background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)' }}>

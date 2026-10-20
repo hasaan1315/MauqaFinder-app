@@ -4,6 +4,13 @@ import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import Link from 'next/link'
 import Image from 'next/image'
+import PasswordInput from '@/components/PasswordInput'
+import {
+  checkPassword,
+  getPasswordStrength,
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+} from '@/lib/password'
 
 export default function SignupPage() {
   const [fullName, setFullName] = useState('')
@@ -12,9 +19,22 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const success = message.includes('Success')
+  const [attempted, setAttempted] = useState(false)
+
+  const check = checkPassword(password)
+  const strength = getPasswordStrength(password)
+  const passwordValid = check.valid
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
+    setAttempted(true)
+
+    // Client-side policy is advisory UX only; the server enforces the real one.
+    if (!passwordValid) {
+      setMessage('Password does not meet the requirements listed below.')
+      return
+    }
+
     setLoading(true)
     setMessage('')
     const { error } = await supabase.auth.signUp({
@@ -61,9 +81,102 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label className={labelClass} style={{ color: 'var(--text-muted)' }}>Password</label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                className={inputClass} style={{ border: '1px solid var(--border)' }} placeholder="Min. 6 characters" required />
+              <PasswordInput
+                value={password}
+                onChange={setPassword}
+                label="Password"
+                placeholder={`Min. ${PASSWORD_MIN_LENGTH} characters`}
+                autoComplete="new-password"
+                describedBy="password-requirements"
+                invalid={attempted && !passwordValid}
+              />
+
+              {/* Strength meter */}
+              {password.length > 0 && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span style={{ color: 'var(--text-muted)' }}>Password strength</span>
+                    <span style={{ color: strength.color }}>
+                      {strength.label}
+                    </span>
+                  </div>
+                  <div
+                    className="h-1.5 w-full rounded-full overflow-hidden"
+                    style={{ background: 'var(--border)' }}
+                    role="meter"
+                    aria-valuemin={0}
+                    aria-valuemax={4}
+                    aria-valuenow={strength.score}
+                    aria-valuetext={`${strength.label}. ${check.metCount} of ${check.total} requirements met.`}
+                    aria-label="Password strength"
+                  >
+                    <div
+                      className="h-full rounded-full transition-all duration-300"
+                      style={{ width: `${strength.percent}%`, background: strength.color }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Requirements checklist */}
+              <ul id="password-requirements" className="mt-3 space-y-1">
+                {check.rules.map((rule) => (
+                  <li key={rule.id} className="flex items-center gap-2 text-xs">
+                    <span
+                      aria-hidden="true"
+                      className="flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold shrink-0"
+                      style={{
+                        background: rule.met ? 'rgba(16,185,129,0.15)' : 'rgba(148,163,184,0.15)',
+                        color: rule.met ? '#10b981' : 'var(--text-placeholder)',
+                      }}
+                    >
+                      {rule.met ? '✓' : '•'}
+                    </span>
+                    <span style={{ color: rule.met ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                      {rule.label}
+                    </span>
+                  </li>
+                ))}
+                <li className="flex items-center gap-2 text-xs">
+                  <span
+                    aria-hidden="true"
+                    className="flex items-center justify-center w-4 h-4 rounded-full text-[10px] font-bold shrink-0"
+                    style={{
+                      background: check.tooLong ? 'rgba(239,68,68,0.15)' : 'rgba(148,163,184,0.15)',
+                      color: check.tooLong ? '#ef4444' : 'var(--text-placeholder)',
+                    }}
+                  >
+                    {check.tooLong ? '✕' : '•'}
+                  </span>
+                  <span style={{ color: check.tooLong ? '#ef4444' : 'var(--text-muted)' }}>
+                    No more than {PASSWORD_MAX_LENGTH} characters
+                  </span>
+                </li>
+              </ul>
+
+              {attempted && !passwordValid && (
+                <p
+                  id="password-requirements-status"
+                  className="mt-2 text-xs"
+                  style={{ color: '#f87171' }}
+                  role="alert"
+                >
+                  {check.tooLong
+                    ? `Password cannot be longer than ${PASSWORD_MAX_LENGTH} characters.`
+                    : 'Password does not meet all the requirements above.'}
+                </p>
+              )}
+
+              {/* Screen-reader-only live summary of the remaining requirements. */}
+              <p className="sr-only" aria-live="polite">
+                {password.length === 0
+                  ? ''
+                  : `${check.metCount} of ${check.total} password requirements met. ${
+                      check.tooLong
+                        ? `Password is too long; the maximum is ${PASSWORD_MAX_LENGTH} characters.`
+                        : ''
+                    }`}
+              </p>
             </div>
 
             {message && (

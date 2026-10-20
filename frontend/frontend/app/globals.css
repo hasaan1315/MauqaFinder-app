@@ -43,6 +43,45 @@ input:focus, select:focus {
   box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
 }
 
+/* ---------- Password field ---------- */
+
+/* The shared input rule above forces the neutral border colour, so the error
+   state needs its own high-specificity rule to show through. */
+.password-input[aria-invalid="true"] {
+  border-color: #ef4444 !important;
+}
+
+.password-input[aria-invalid="true"]:focus {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+}
+
+/* Show/hide password toggle */
+.password-toggle {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-muted);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.password-toggle:hover {
+  color: var(--accent);
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  color: var(--accent);
+}
+
+/* Keep the native password reveal button from doubling up with our toggle. */
+.password-input::-ms-reveal,
+.password-input::-ms-clear {
+  display: none;
+}
+
 /* Light mode scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
